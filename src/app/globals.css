@@ -1,0 +1,415 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   CareerOS design tokens
+   Single source of truth. Tailwind (see tailwind.config.ts) only maps these.
+   Values are stored as raw RGB triplets so they work with Tailwind's
+   `<alpha-value>` opacity modifiers (e.g. `text-ink/60`).
+   ========================================================================== */
+@layer base {
+  :root {
+    /* Surfaces — warm paper, never a cold grey and never a beige home-brand */
+    --color-canvas: 247 244 238;
+    --color-canvas-raised: 252 250 246;
+    --color-canvas-sunken: 241 237 228;
+
+    /* Text — ink, close to black but never pure black */
+    --color-ink: 28 28 26;
+    --color-ink-muted: 104 102 96;
+    --color-ink-faint: 150 146 138;
+
+    /* Hairlines */
+    --color-line: 220 216 207;
+    --color-line-strong: 190 185 175;
+
+    /* The only accent: restrained cobalt / ink blue. Used for active state,
+       selection, small interactive highlights — never for decoration. */
+    --color-accent: 49 87 213;
+    --color-accent-hover: 39 70 184;
+    --color-accent-soft: 235 240 252;
+
+    /* Typography — system stacks only, no font files required to render.
+       Serif is the editorial voice: Home hero, page titles, rare quotes. */
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text",
+      "Segoe UI", system-ui, "PingFang SC", "Hiragino Sans GB",
+      "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", "Helvetica Neue",
+      Arial, sans-serif;
+    --font-serif: "Georgia", "Times New Roman", "Noto Serif SC", "Songti SC",
+      "STSong", "SimSun", serif;
+
+    /* Locale aware display type: Latin can be tightened and set tight,
+       CJK cannot do either. */
+    --tracking-hero: -0.035em;
+    --tracking-title: -0.02em;
+    --tracking-number: -0.02em;
+    --tracking-label: 0.14em;
+    --leading-hero: 1.05;
+
+    --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  html[lang^="zh"] {
+    --tracking-hero: -0.005em;
+    --tracking-title: 0em;
+    --tracking-number: 0em;
+    --tracking-label: 0.03em;
+    /* CJK needs more leading than Latin at display sizes. */
+    --leading-hero: 1.1;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: rgb(var(--color-accent) / 0.14);
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent/35 ring-offset-2 ring-offset-canvas;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Bubble Space — real air bubbles drifting in warm light.
+   Two skins: transparent refracting soap bubbles (.bubble-soap) and soft
+   milky cloud puffs (.bubble-cloud). All per-bubble parameters (drift
+   rhythm, amplitude) arrive as CSS variables set deterministically from the
+   event id in React. Pure CSS motion — no JS animation loop.
+   -------------------------------------------------------------------------- */
+
+/* Four drift keyframes (up-right / down-left / up-left / down-right).
+   Amplitude comes from per-bubble vars: y 20–36px, x 10–24px, ±1.5deg,
+   duration 9–15s, ease-in-out, alternate. */
+@keyframes bubble-drift-a {
+  from {
+    transform: translate3d(0, 0, 0) rotate(var(--r0, -1deg));
+  }
+  to {
+    transform: translate3d(var(--fx, 14px), calc(-1 * var(--fy, 26px)), 0)
+      rotate(var(--r1, 1deg));
+  }
+}
+
+@keyframes bubble-drift-b {
+  from {
+    transform: translate3d(0, 0, 0) rotate(var(--r1, 1deg));
+  }
+  to {
+    transform: translate3d(calc(-1 * var(--fx, 14px)), var(--fy, 26px), 0)
+      rotate(var(--r0, -1deg));
+  }
+}
+
+@keyframes bubble-drift-c {
+  from {
+    transform: translate3d(0, 0, 0) rotate(var(--r1, 1deg));
+  }
+  to {
+    transform: translate3d(calc(-1 * var(--fx, 14px)), calc(-1 * var(--fy, 26px)), 0)
+      rotate(var(--r1, 1deg));
+  }
+}
+
+@keyframes bubble-drift-d {
+  from {
+    transform: translate3d(0, 0, 0) rotate(var(--r0, -1deg));
+  }
+  to {
+    transform: translate3d(var(--fx, 14px), var(--fy, 26px), 0)
+      rotate(var(--r0, -1deg));
+  }
+}
+
+.bubble-drift-a,
+.bubble-drift-b,
+.bubble-drift-c,
+.bubble-drift-d {
+  animation-duration: var(--dur, 12s);
+  animation-timing-function: ease-in-out;
+  animation-delay: var(--delay, 0s);
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  animation-fill-mode: both;
+  will-change: transform;
+}
+
+.bubble-drift-a { animation-name: bubble-drift-a; }
+.bubble-drift-b { animation-name: bubble-drift-b; }
+.bubble-drift-c { animation-name: bubble-drift-c; }
+.bubble-drift-d { animation-name: bubble-drift-d; }
+
+/* Mobile: same rhythm, roughly half the amplitude. */
+@media (max-width: 1023px) {
+  @keyframes bubble-drift-a {
+    from { transform: translate3d(0, 0, 0) rotate(calc(var(--r0, -1deg) * 0.5)); }
+    to {
+      transform: translate3d(
+          calc(var(--fx, 14px) * 0.5),
+          calc(-1 * var(--fy, 26px) * 0.5),
+          0
+        )
+        rotate(calc(var(--r1, 1deg) * 0.5));
+    }
+  }
+
+  @keyframes bubble-drift-b {
+    from { transform: translate3d(0, 0, 0) rotate(calc(var(--r1, 1deg) * 0.5)); }
+    to {
+      transform: translate3d(
+          calc(-1 * var(--fx, 14px) * 0.5),
+          calc(var(--fy, 26px) * 0.5),
+          0
+        )
+        rotate(calc(var(--r0, -1deg) * 0.5));
+    }
+  }
+
+  @keyframes bubble-drift-c {
+    from { transform: translate3d(0, 0, 0) rotate(calc(var(--r1, 1deg) * 0.5)); }
+    to {
+      transform: translate3d(
+          calc(-1 * var(--fx, 14px) * 0.5),
+          calc(-1 * var(--fy, 26px) * 0.5),
+          0
+        )
+        rotate(calc(var(--r1, 1deg) * 0.5));
+    }
+  }
+
+  @keyframes bubble-drift-d {
+    from { transform: translate3d(0, 0, 0) rotate(calc(var(--r0, -1deg) * 0.5)); }
+    to {
+      transform: translate3d(
+          calc(var(--fx, 14px) * 0.5),
+          calc(var(--fy, 26px) * 0.5),
+          0
+        )
+        rotate(calc(var(--r0, -1deg) * 0.5));
+    }
+  }
+}
+
+/* Shared skin base: a true circle, soft outer shadow, calm hover. */
+.bubble-skin {
+  position: relative;
+  border: none;
+  border-radius: 50%;
+  transition:
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 500ms ease;
+}
+
+/* The thought text sits above every ::before / ::after layer. */
+.bubble-skin .bubble-text {
+  position: relative;
+  z-index: 2;
+  color: rgb(29 29 31 / 0.76);
+  overflow-wrap: anywhere;
+}
+
+/* ---- Soap bubble: centre almost transparent, light lives on the edge ---- */
+.bubble-soap {
+  background:
+    radial-gradient(
+      circle at 31% 26%,
+      rgba(255, 255, 255, 0.4),
+      rgba(255, 255, 255, 0.04) 34%,
+      transparent 58%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 50%,
+      rgba(196, 218, 226, 0.1) 70%,
+      transparent 78%
+    );
+  box-shadow:
+    0 16px 34px rgb(29 29 31 / 0.05),
+    inset 0 0 26px rgba(255, 255, 255, 0.3),
+    inset -12px -14px 32px rgba(178, 198, 214, 0.1);
+}
+
+/* Hair-thin refractive rim: faint pearl / cyan / lavender catching light
+   on different sides of the circle. */
+.bubble-soap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 1.5px;
+  background: conic-gradient(
+    from 200deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(188, 222, 228, 0.5) 16%,
+    rgba(255, 255, 255, 0.16) 36%,
+    rgba(216, 206, 236, 0.45) 56%,
+    rgba(255, 255, 255, 0.1) 72%,
+    rgba(198, 226, 220, 0.46) 88%,
+    rgba(255, 255, 255, 0.95)
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0.82;
+  transition: opacity 500ms ease;
+  pointer-events: none;
+}
+
+/* Soft window reflection, upper-left. */
+.bubble-soap::after {
+  content: "";
+  position: absolute;
+  left: 16%;
+  top: 10%;
+  width: 36%;
+  height: 20%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.72),
+    rgba(255, 255, 255, 0) 70%
+  );
+  transform: rotate(-28deg);
+  pointer-events: none;
+}
+
+/* ---- Cloud bubble: milky puff, main circle + two soft lobes ---- */
+.bubble-cloud {
+  background: radial-gradient(
+    circle at 36% 30%,
+    rgba(255, 255, 255, 0.88),
+    rgba(245, 247, 249, 0.5) 48%,
+    rgba(232, 238, 242, 0.28) 76%,
+    rgba(226, 233, 238, 0.14)
+  );
+  box-shadow:
+    0 18px 38px rgb(29 29 31 / 0.06),
+    inset 0 0 26px rgba(255, 255, 255, 0.5),
+    inset -10px -12px 30px rgba(222, 232, 226, 0.18);
+}
+
+.bubble-cloud::before {
+  content: "";
+  position: absolute;
+  left: -17%;
+  top: 20%;
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 42% 36%,
+    rgba(255, 255, 255, 0.72),
+    rgba(241, 244, 247, 0.34) 58%,
+    rgba(230, 238, 243, 0.14) 85%
+  );
+  filter: blur(1px);
+  pointer-events: none;
+}
+
+.bubble-cloud::after {
+  content: "";
+  position: absolute;
+  right: -13%;
+  top: 33%;
+  width: 48%;
+  height: 48%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 40% 34%,
+    rgba(255, 255, 255, 0.62),
+    rgba(238, 243, 241, 0.3) 58%,
+    rgba(228, 236, 233, 0.12) 85%
+  );
+  filter: blur(1px);
+  pointer-events: none;
+}
+
+/* Hover (desktop): gentle lift, rim a touch clearer, shadow a touch deeper.
+   Never a bounce. */
+@media (hover: hover) {
+  .bubble-skin:hover,
+  .bubble-skin:focus-visible {
+    transform: scale(1.03);
+  }
+
+  .bubble-soap:hover,
+  .bubble-soap:focus-visible {
+    box-shadow:
+      0 22px 44px rgb(29 29 31 / 0.08),
+      inset 0 0 30px rgba(255, 255, 255, 0.38),
+      inset -12px -14px 32px rgba(178, 198, 214, 0.16);
+  }
+
+  .bubble-soap:hover::before,
+  .bubble-soap:focus-visible::before {
+    opacity: 1;
+  }
+
+  .bubble-cloud:hover,
+  .bubble-cloud:focus-visible {
+    box-shadow:
+      0 24px 48px rgb(29 29 31 / 0.09),
+      inset 0 0 30px rgba(255, 255, 255, 0.55),
+      inset -10px -12px 30px rgba(222, 232, 226, 0.24);
+  }
+}
+
+/* The field itself: warm white with an almost-imperceptible ambient glow
+   (sage / pale blue / light lavender). No gradient blobs. */
+.bubble-field {
+  background:
+    radial-gradient(
+      460px 320px at 14% 16%,
+      rgb(74 103 88 / 0.05),
+      transparent 70%
+    ),
+    radial-gradient(
+      520px 360px at 86% 28%,
+      rgb(147 170 205 / 0.06),
+      transparent 70%
+    ),
+    radial-gradient(
+      460px 340px at 52% 92%,
+      rgb(196 181 217 / 0.05),
+      transparent 70%
+    );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble-drift-a,
+  .bubble-drift-b,
+  .bubble-drift-c,
+  .bubble-drift-d {
+    animation: none;
+  }
+
+  .bubble-skin,
+  .bubble-skin:hover,
+  .bubble-skin:focus-visible {
+    transition: none;
+    transform: none;
+  }
+}
